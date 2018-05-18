@@ -131,6 +131,7 @@ will be passed via `callback(filename)`.
     be selected by default when the message box opens.
   * `title` String (optional) - Title of the message box, some platforms will not show it.
   * `message` String - Content of the message box.
+  * `content` String (optional) - The text content to display in the rich text view.
   * `detail` String (optional) - Extra information of the message.
   * `checkboxLabel` String (optional) - If provided, the message box will
     include a checkbox with the given label. The checkbox state can be
@@ -175,7 +176,7 @@ will be asynchronous and the result will be passed via `callback(response)`.
 
 * `title` String - The title to display in the error box.
 * `message` String - The message to display in the error box.
-* `content` String - The text content to display in the rich text view.
+* `content` String (optional) - The text content to display in the rich text view.
 
 Displays a modal dialog that shows an error message.
 
