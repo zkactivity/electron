@@ -7,6 +7,7 @@
 #import <Cocoa/Cocoa.h>
 
 #include "atom/browser/native_window.h"
+#include "atom/common/native_mate_converters/string16_converter.h"
 #include "base/callback.h"
 #include "base/mac/mac_util.h"
 #include "base/strings/sys_string_conversions.h"
@@ -204,21 +205,27 @@ void ShowMessageBox(NativeWindow* parent_window,
 
 void ShowErrorBox(const base::string16& title,
                   const base::string16& message,
-                  const base::string16& content) {
-  NSTextView* accessory =
-      [[NSTextView alloc] initWithFrame:NSMakeRect(0, 0, 200, 15)];
-  NSFont* font = [NSFont systemFontOfSize:[NSFont systemFontSize]];
-  NSDictionary* textAttributes =
-      [NSDictionary dictionaryWithObject:font forKey:NSFontAttributeName];
-  [accessory insertText:[[NSAttributedString alloc]
-                            initWithString:base::SysUTF16ToNSString(content)
-                                attributes:textAttributes]];
-  [accessory setEditable:NO];
-
+                  mate::Arguments* args) {
   NSAlert* alert = [[NSAlert alloc] init];
+
   alert.messageText = base::SysUTF16ToNSString(title);
   [alert setInformativeText:base::SysUTF16ToNSString(message)];
-  alert.accessoryView = accessory;
+
+  base::string16 content;
+  if (args->GetNext(&content)) {
+    NSTextView* accessory =
+        [[NSTextView alloc] initWithFrame:NSMakeRect(0, 0, 200, 15)];
+    NSFont* font = [NSFont systemFontOfSize:[NSFont systemFontSize]];
+    NSDictionary* textAttributes =
+        [NSDictionary dictionaryWithObject:font forKey:NSFontAttributeName];
+    [accessory insertText:[[NSAttributedString alloc]
+                              initWithString:base::SysUTF16ToNSString(content)
+                                  attributes:textAttributes]];
+    [accessory setEditable:NO];
+
+    alert.accessoryView = accessory;
+  }
+
   [alert setAlertStyle:NSCriticalAlertStyle];
 
   [alert runModal];

@@ -10,6 +10,7 @@
 
 #include "base/callback_forward.h"
 #include "base/strings/string16.h"
+#include "native_mate/arguments.h"
 
 namespace gfx {
 class ImageSkia;
@@ -64,7 +65,7 @@ void ShowMessageBox(NativeWindow* parent_window,
 // stage of application.
 void ShowErrorBox(const base::string16& title,
                   const base::string16& message,
-                  const base::string16& content);
+                  mate::Arguments* args);
 
 }  // namespace atom
 
