@@ -202,11 +202,25 @@ void ShowMessageBox(NativeWindow* parent_window,
   }
 }
 
-void ShowErrorBox(const base::string16& title, const base::string16& content) {
+void ShowErrorBox(const base::string16& title,
+                  const base::string16& message,
+                  const base::string16& content) {
+  NSTextView* accessory =
+      [[NSTextView alloc] initWithFrame:NSMakeRect(0, 0, 200, 15)];
+  NSFont* font = [NSFont systemFontOfSize:[NSFont systemFontSize]];
+  NSDictionary* textAttributes =
+      [NSDictionary dictionaryWithObject:font forKey:NSFontAttributeName];
+  [accessory insertText:[[NSAttributedString alloc]
+                            initWithString:base::SysUTF16ToNSString(content)
+                                attributes:textAttributes]];
+  [accessory setEditable:NO];
+
   NSAlert* alert = [[NSAlert alloc] init];
-  [alert setMessageText:base::SysUTF16ToNSString(title)];
-  [alert setInformativeText:base::SysUTF16ToNSString(content)];
+  alert.messageText = base::SysUTF16ToNSString(title);
+  [alert setInformativeText:base::SysUTF16ToNSString(message)];
+  alert.accessoryView = accessory;
   [alert setAlertStyle:NSCriticalAlertStyle];
+
   [alert runModal];
   [alert release];
 }

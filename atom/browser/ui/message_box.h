@@ -62,7 +62,9 @@ void ShowMessageBox(NativeWindow* parent_window,
 
 // Like ShowMessageBox with simplest settings, but safe to call at very early
 // stage of application.
-void ShowErrorBox(const base::string16& title, const base::string16& content);
+void ShowErrorBox(const base::string16& title,
+                  const base::string16& message,
+                  const base::string16& content);
 
 }  // namespace atom
 

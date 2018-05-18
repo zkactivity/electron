@@ -171,10 +171,11 @@ The `browserWindow` argument allows the dialog to attach itself to a parent wind
 If a `callback` is passed, the dialog will not block the process. The API call
 will be asynchronous and the result will be passed via `callback(response)`.
 
-### `dialog.showErrorBox(title, content)`
+### `dialog.showErrorBox(title, message, content)`
 
 * `title` String - The title to display in the error box.
-* `content` String - The text content to display in the error box.
+* `message` String - The message to display in the error box.
+* `content` String - The text content to display in the rich text view.
 
 Displays a modal dialog that shows an error message.
 
