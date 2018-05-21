@@ -220,7 +220,9 @@ void ShowMessageBox(NativeWindow* parent,
       ->RunAsynchronous(callback);
 }
 
-void ShowErrorBox(const base::string16& title, const base::string16& content) {
+void ShowErrorBox(const base::string16& title,
+                  const base::string16& content,
+                  mate::Arguments* args) {
   if (Browser::Get()->is_ready()) {
     GtkMessageBox(nullptr, MESSAGE_BOX_TYPE_ERROR, {"OK"}, -1, 0, "Error",
                   base::UTF16ToUTF8(title).c_str(),

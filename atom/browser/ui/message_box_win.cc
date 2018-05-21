@@ -274,7 +274,9 @@ void ShowMessageBox(NativeWindow* parent,
                  callback));
 }
 
-void ShowErrorBox(const base::string16& title, const base::string16& content) {
+void ShowErrorBox(const base::string16& title,
+                  const base::string16& content,
+                  mate::Arguments* args) {
   atom::UnresponsiveSuppressor suppressor;
   ShowTaskDialogUTF16(nullptr, MESSAGE_BOX_TYPE_ERROR, {}, -1, 0, 0, L"Error",
                       title, content, L"", nullptr, gfx::ImageSkia());
