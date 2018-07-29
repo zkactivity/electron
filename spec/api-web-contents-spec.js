@@ -148,6 +148,28 @@ describe('webContents module', () => {
     })
   })
 
+  describe('openDevTools() API', () => {
+    it('can show window with activation', (done) => {
+      w.show()
+      assert.equal(w.isFocused(), true)
+      w.webContents.openDevTools({ mode: 'detach', activate: true })
+      w.webContents.once('devtools-opened', () => {
+        assert.equal(w.isFocused(), false)
+        done()
+      })
+    })
+
+    it('can show window without activation', (done) => {
+      w.show()
+      assert.equal(w.isFocused(), true)
+      w.webContents.openDevTools({ mode: 'detach', activate: false })
+      w.webContents.once('devtools-opened', () => {
+        assert.equal(w.isFocused(), true)
+        done()
+      })
+    })
+  })
+
   describe('before-input-event event', () => {
     it('can prevent document keyboard events', (done) => {
       w.loadURL(`file://${path.join(__dirname, 'fixtures', 'pages', 'key-events.html')}`)

@@ -27,10 +27,10 @@ using brightray::InspectableWebContentsViewMac;
     (InspectableWebContentsViewMac*)view;
 - (void)removeObservers;
 - (void)notifyDevToolsFocused;
-- (void)setDevToolsVisible:(BOOL)visible;
+- (void)setDevToolsVisible:(BOOL)visible activate:(BOOL)activate;
 - (BOOL)isDevToolsVisible;
 - (BOOL)isDevToolsFocused;
-- (void)setIsDocked:(BOOL)docked;
+- (void)setIsDocked:(BOOL)docked activate:(BOOL)activate;
 - (void)setContentsResizingStrategy:
     (const DevToolsContentsResizingStrategy&)strategy;
 - (void)setTitle:(NSString*)title;
