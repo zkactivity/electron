@@ -170,6 +170,10 @@ bool WebContentsPreferences::GetPreference(const base::StringPiece& name,
   return GetAsString(&preference_, name, value);
 }
 
+bool WebContentsPreferences::IsRemoteModuleEnabled() const {
+  return IsEnabled(options::kEnableRemoteModule, true);
+}
+
 bool WebContentsPreferences::GetPreloadPath(
     base::FilePath::StringType* path) const {
   DCHECK(path);
@@ -265,6 +269,10 @@ void WebContentsPreferences::AppendCommandLineSwitches(
         command_line->AppendArg(customArg.GetString());
     }
   }
+
+  // Whether to enable the remote module
+  if (!IsRemoteModuleEnabled())
+    command_line->AppendSwitch(switches::kDisableRemoteModule);
 
   // Run Electron APIs and preload script in isolated world
   if (IsEnabled(options::kContextIsolation))
