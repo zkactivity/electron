@@ -34,6 +34,7 @@
 #include "atom/common/api/atom_api_native_image.h"
 #include "atom/common/api/event_emitter_caller.h"
 #include "atom/common/color_util.h"
+#include "atom/common/heap_snapshot.h"
 #include "atom/common/mouse_util.h"
 #include "atom/common/native_mate_converters/blink_converter.h"
 #include "atom/common/native_mate_converters/callback.h"
@@ -49,6 +50,7 @@
 #include "atom/common/options_switches.h"
 #include "base/message_loop/message_loop.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/values.h"
 #include "brightray/browser/inspectable_web_contents.h"
@@ -298,6 +300,10 @@ struct WebContents::FrameDispatchHelper {
                              const base::ListValue& args,
                              IPC::Message* message) {
     api_web_contents->OnRendererMessageSync(rfh, channel, args, message);
+  }
+
+  void OnCreateHeapSnapshotFile(IPC::Message* message) {
+    api_web_contents->OnCreateHeapSnapshotFile(rfh, message);
   }
 };
 
@@ -1036,6 +1042,9 @@ bool WebContents::OnMessageReceived(const IPC::Message& message,
     IPC_MESSAGE_HANDLER(AtomAutofillFrameHostMsg_ShowPopup, ShowAutofillPopup)
     IPC_MESSAGE_HANDLER(AtomAutofillFrameHostMsg_HidePopup, HideAutofillPopup)
 #endif
+    IPC_MESSAGE_FORWARD_DELAY_REPLY(
+        AtomFrameHostMsg_CreateHeapSnapshotFile, &helper,
+        FrameDispatchHelper::OnCreateHeapSnapshotFile)
     IPC_MESSAGE_UNHANDLED(handled = false)
   IPC_END_MESSAGE_MAP()
 
@@ -2106,6 +2115,21 @@ void WebContents::OnRendererMessageTo(content::RenderFrameHost* frame_host,
   if (web_contents) {
     web_contents->SendIPCMessageWithSender(send_to_all, channel, args, ID());
   }
+}
+
+void WebContents::OnCreateHeapSnapshotFile(content::RenderFrameHost* frame_host,
+                                           IPC::Message* message) {
+  base::ThreadRestrictions::ScopedAllowIO allow_io;
+
+  auto file_path = GetHeapSnapshotFilePath();
+
+  base::File file(file_path,
+                  base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
+
+  AtomFrameHostMsg_CreateHeapSnapshotFile::WriteReplyParams(
+      message, file_path, IPC::TakePlatformFileForTransit(std::move(file)));
+
+  frame_host->Send(message);
 }
 
 // static
