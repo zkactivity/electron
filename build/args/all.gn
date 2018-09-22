@@ -9,3 +9,5 @@ enable_cdm_host_verification = false
 enable_extensions = false
 proprietary_codecs = true
 ffmpeg_branding = "Chrome"
+
+use_cfi_icall=false
