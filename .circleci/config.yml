@@ -233,7 +233,7 @@ step-maybe-trigger-arm-test: &step-maybe-trigger-arm-test
     name: Trigger an arm test on VSTS if applicable
     command: |
       # Only run for non-fork prs
-      if [ "$TRIGGER_ARM_TEST" == "true" ] && [ -z "CIRCLE_PR_NUMBER" ]; then
+      if [ "$TRIGGER_ARM_TEST" == "true" ] && [ -z "$CIRCLE_PR_NUMBER" ]; then
         #Trigger VSTS job, passing along CircleCI job number and branch to build
         echo "Triggering electron-$ARM_ARCH-testing build on VSTS"
         node script/ci-release-build.js --job=electron-$ARM_ARCH-testing --ci=VSTS --armTest --circleBuildNum=$CIRCLE_BUILD_NUM $CIRCLE_BRANCH
@@ -575,7 +575,6 @@ jobs:
     environment:
       <<: *env-arm
       <<: *env-testing-build
-      TRIGGER_ARM_TEST: true
     <<: *steps-electron-build-for-tests
 
   linux-arm-ffmpeg:
@@ -609,6 +608,7 @@ jobs:
     environment:
       <<: *env-arm64
       <<: *env-testing-build
+      TRIGGER_ARM_TEST: true
     <<: *steps-electron-build-for-tests
 
   linux-arm64-ffmpeg:

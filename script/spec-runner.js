@@ -41,7 +41,7 @@ getSpecHash().then(([currentSpecHash, currentSpecInstallHash]) => {
 }).then(() => {
   let exe = path.resolve(BASE, utils.getElectronExec())
   const args = process.argv.slice(2)
-  if (process.platform === 'linux') {
+  if (process.platform === 'linux' && process.arch.indexOf('arm') !== 0) {
     args.unshift(path.resolve(__dirname, 'dbus_mock.py'), exe)
     exe = 'python'
   }
