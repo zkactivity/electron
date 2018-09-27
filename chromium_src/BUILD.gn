@@ -21,5 +21,6 @@ source_set("chrome") {
   ]
   deps = [
     "//components/security_state/content",
+    "//ui/snapshot",
   ]
 }
