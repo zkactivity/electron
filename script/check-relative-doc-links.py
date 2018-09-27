@@ -32,6 +32,8 @@ def main():
         ' files within docs directory and its ' +
         str(totalDirs) + ' subdirectories.')
   print('Found ' + str(totalBrokenLinks) + ' broken relative links.')
+  if totalBrokenLinks > 0:
+    sys.exit(1)
 
 
 def getBrokenLinks(filepath):
