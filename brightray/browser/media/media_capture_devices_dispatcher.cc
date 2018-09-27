@@ -4,7 +4,11 @@
 
 #include "brightray/browser/media/media_capture_devices_dispatcher.h"
 
+#include <utility>
+
 #include "base/logging.h"
+#include "chrome/browser/media/webrtc/desktop_media_list.h"
+#include "chrome/browser/media/webrtc/native_desktop_media_list.h"
 #include "content/public/browser/browser_thread.h"
 #include "content/public/browser/media_capture_devices.h"
 #include "content/public/common/media_stream_request.h"
@@ -40,8 +44,42 @@ MediaCaptureDevicesDispatcher* MediaCaptureDevicesDispatcher::GetInstance() {
   return base::Singleton<MediaCaptureDevicesDispatcher>::get();
 }
 
+std::vector<std::unique_ptr<DesktopMediaList>>
+MediaCaptureDevicesDispatcher::CreateMediaList(
+    const std::vector<content::DesktopMediaID::Type>& types) {
+  // Keep same order as the input |sources| and avoid duplicates.
+  std::vector<std::unique_ptr<DesktopMediaList>> source_lists;
+  for (auto source_type : types) {
+    switch (source_type) {
+      case content::DesktopMediaID::TYPE_NONE:
+        break;
+      case content::DesktopMediaID::TYPE_SCREEN: {
+        std::unique_ptr<DesktopMediaList> screen_list =
+            std::make_unique<NativeDesktopMediaList>(
+                content::DesktopMediaID::TYPE_SCREEN,
+                std::move(screen_capturer_));
+        source_lists.push_back(std::move(screen_list));
+        break;
+      }
+      case content::DesktopMediaID::TYPE_WINDOW: {
+        std::unique_ptr<DesktopMediaList> window_list =
+            std::make_unique<NativeDesktopMediaList>(
+                content::DesktopMediaID::TYPE_WINDOW,
+                std::move(window_capturer_));
+        source_lists.push_back(std::move(window_list));
+        break;
+      }
+      case content::DesktopMediaID::TYPE_WEB_CONTENTS:
+        break;
+    }
+  }
+  return source_lists;
+}
+
 MediaCaptureDevicesDispatcher::MediaCaptureDevicesDispatcher()
-    : is_device_enumeration_disabled_(false) {
+    : screen_capturer_(content::desktop_capture::CreateScreenCapturer()),
+      window_capturer_(content::desktop_capture::CreateWindowCapturer()),
+      is_device_enumeration_disabled_(false) {
   // MediaCaptureDevicesDispatcher is a singleton. It should be created on
   // UI thread.
   DCHECK(BrowserThread::CurrentlyOn(BrowserThread::UI));

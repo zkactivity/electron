@@ -12,8 +12,8 @@
 #include "atom/common/native_mate_converters/gfx_converter.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/utf_string_conversions.h"
-#include "chrome/browser/media/desktop_media_list.h"
-#include "content/public/browser/desktop_capture.h"
+#include "brightray/browser/media/media_capture_devices_dispatcher.h"
+#include "chrome/browser/media/webrtc/desktop_media_list.h"
 #include "native_mate/dictionary.h"
 #include "third_party/webrtc/modules/desktop_capture/desktop_capture_options.h"
 #include "third_party/webrtc/modules/desktop_capture/desktop_capturer.h"
@@ -69,51 +69,84 @@ void DesktopCapturer::StartHandling(bool capture_window,
     using_directx_capturer_ = webrtc::ScreenCapturerWinDirectx::IsSupported();
   }
 #endif  // defined(OS_WIN)
-  std::unique_ptr<webrtc::DesktopCapturer> screen_capturer(
-      capture_screen ? content::desktop_capture::CreateScreenCapturer()
-                     : nullptr);
-  std::unique_ptr<webrtc::DesktopCapturer> window_capturer(
-      capture_window ? content::desktop_capture::CreateWindowCapturer()
-                     : nullptr);
-  media_list_.reset(new NativeDesktopMediaList(std::move(screen_capturer),
-                                               std::move(window_capturer)));
 
-  media_list_->SetThumbnailSize(thumbnail_size);
-  media_list_->StartUpdating(this);
-}
+  // clear any existing captured sources.
+  captured_sources_.clear();
 
-void DesktopCapturer::OnSourceAdded(int index) {}
-
-void DesktopCapturer::OnSourceRemoved(int index) {}
-
-void DesktopCapturer::OnSourceMoved(int old_index, int new_index) {}
-
-void DesktopCapturer::OnSourceNameChanged(int index) {}
-
-void DesktopCapturer::OnSourceThumbnailChanged(int index) {}
-
-bool DesktopCapturer::OnRefreshFinished() {
-  const auto media_list_sources = media_list_->GetSources();
-  std::vector<DesktopCapturer::Source> sources;
-  for (const auto& media_list_source : media_list_sources) {
-    sources.emplace_back(
-        DesktopCapturer::Source{media_list_source, std::string()});
+  // Initialize the source list.
+  if (source_lists_.empty()) {
+    std::vector<content::DesktopMediaID::Type> media_types = {
+        content::DesktopMediaID::TYPE_SCREEN,
+        content::DesktopMediaID::TYPE_WINDOW};
+    source_lists_ = brightray::MediaCaptureDevicesDispatcher::GetInstance()
+                        ->CreateMediaList(media_types);
+    for (auto& source_list : source_lists_)
+      source_list->AddObserver(this);
   }
 
+  // Apply the new thumbnail size and restart capture.
+  for (auto& source_list : source_lists_) {
+    source_list->SetThumbnailSize(thumbnail_size);
+    source_list->StartUpdating();
+  }
+
+  // Start listening for captured sources.
+  capture_window_ = capture_window;
+  capture_screen_ = capture_screen;
+}
+
+void DesktopCapturer::OnSourceAdded(DesktopMediaList* list, int index) {}
+
+void DesktopCapturer::OnSourceRemoved(DesktopMediaList* list, int index) {}
+
+void DesktopCapturer::OnSourceMoved(DesktopMediaList* list,
+                                    int old_index,
+                                    int new_index) {}
+
+void DesktopCapturer::OnSourceNameChanged(DesktopMediaList* list, int index) {}
+
+void DesktopCapturer::OnSourceThumbnailChanged(DesktopMediaList* list,
+                                               int index) {}
+
+bool DesktopCapturer::OnRefreshFinished(DesktopMediaList* list) {
+  if (!capture_window_ && !capture_screen_)
+    return true;
+
+  std::vector<DesktopCapturer::Source> window_sources;
+  if (capture_window_ &&
+      list->GetMediaListType() == content::DesktopMediaID::TYPE_WINDOW) {
+    capture_window_ = false;
+    const auto& media_list_sources = list->GetSources();
+    for (const auto& media_list_source : media_list_sources) {
+      window_sources.emplace_back(
+          DesktopCapturer::Source{media_list_source, std::string()});
+    }
+    std::move(window_sources.begin(), window_sources.end(),
+              std::back_inserter(captured_sources_));
+  }
+
+  std::vector<DesktopCapturer::Source> screen_sources;
+  if (capture_screen_ &&
+      list->GetMediaListType() == content::DesktopMediaID::TYPE_SCREEN) {
+    capture_screen_ = false;
+    const auto& media_list_sources = list->GetSources();
+    for (const auto& media_list_source : media_list_sources) {
+      screen_sources.emplace_back(
+          DesktopCapturer::Source{media_list_source, std::string()});
+    }
 #if defined(OS_WIN)
-  // Gather the same unique screen IDs used by the electron.screen API in order
-  // to provide an association between it and desktopCapturer/getUserMedia.
-  // This is only required when using the DirectX capturer, otherwise the IDs
-  // across the APIs already match.
-  if (cap->using_directx_capturer_) {
-    std::vector<std::string> device_names;
-    // Crucially, this list of device names will be in the same order as
-    // |media_list_sources|.
-    webrtc::DxgiDuplicatorController::Instance()->GetDeviceNames(&device_names);
-    int device_name_index = 0;
-    for (auto& source : sources) {
-      if (source.media_list_source.id.type ==
-          content::DesktopMediaID::TYPE_SCREEN) {
+    // Gather the same unique screen IDs used by the electron.screen API in
+    // order to provide an association between it and
+    // desktopCapturer/getUserMedia. This is only required when using the
+    // DirectX capturer, otherwise the IDs across the APIs already match.
+    if (using_directx_capturer_) {
+      std::vector<std::string> device_names;
+      // Crucially, this list of device names will be in the same order as
+      // |media_list_sources|.
+      webrtc::DxgiDuplicatorController::Instance()->GetDeviceNames(
+          &device_names);
+      int device_name_index = 0;
+      for (auto& source : screen_sources) {
         const auto& device_name = device_names[device_name_index++];
         std::wstring wide_device_name;
         base::UTF8ToWide(device_name.c_str(), device_name.size(),
@@ -124,21 +157,22 @@ bool DesktopCapturer::OnRefreshFinished() {
         source.display_id = base::Int64ToString(device_id);
       }
     }
-  }
 #elif defined(OS_MACOSX)
-  // On Mac, the IDs across the APIs match.
-  for (auto& source : sources) {
-    if (source.media_list_source.id.type ==
-        content::DesktopMediaID::TYPE_SCREEN) {
+    // On Mac, the IDs across the APIs match.
+    for (auto& source : screen_sources) {
       source.display_id = base::Int64ToString(source.media_list_source.id.id);
     }
-  }
 #endif  // defined(OS_WIN)
-  // TODO(ajmacd): Add Linux support. The IDs across APIs differ but Chrome only
-  // supports capturing the entire desktop on Linux. Revisit this if individual
-  // screen support is added.
+    // TODO(ajmacd): Add Linux support. The IDs across APIs differ but Chrome
+    // only supports capturing the entire desktop on Linux. Revisit this if
+    // individual screen support is added.
+    std::move(screen_sources.begin(), screen_sources.end(),
+              std::back_inserter(captured_sources_));
+  }
 
-  Emit("finished", sources);
+  if (!capture_window_ && !capture_screen_)
+    Emit("finished", captured_sources_);
+
   return false;
 }
 

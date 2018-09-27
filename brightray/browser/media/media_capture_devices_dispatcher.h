@@ -5,11 +5,17 @@
 #ifndef BRIGHTRAY_BROWSER_MEDIA_MEDIA_CAPTURE_DEVICES_DISPATCHER_H_
 #define BRIGHTRAY_BROWSER_MEDIA_MEDIA_CAPTURE_DEVICES_DISPATCHER_H_
 
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "base/memory/singleton.h"
+#include "content/public/browser/desktop_capture.h"
+#include "content/public/browser/desktop_media_id.h"
 #include "content/public/browser/media_observer.h"
 #include "content/public/common/media_stream_request.h"
+
+class DesktopMediaList;
 
 namespace brightray {
 
@@ -18,6 +24,9 @@ namespace brightray {
 class MediaCaptureDevicesDispatcher : public content::MediaObserver {
  public:
   static MediaCaptureDevicesDispatcher* GetInstance();
+
+  std::vector<std::unique_ptr<DesktopMediaList>> CreateMediaList(
+      const std::vector<content::DesktopMediaID::Type>& types);
 
   // Methods for observers. Called on UI thread.
   const content::MediaStreamDevices& GetAudioCaptureDevices();
@@ -72,6 +81,8 @@ class MediaCaptureDevicesDispatcher : public content::MediaObserver {
   MediaCaptureDevicesDispatcher();
   ~MediaCaptureDevicesDispatcher() override;
 
+  std::unique_ptr<webrtc::DesktopCapturer> screen_capturer_;
+  std::unique_ptr<webrtc::DesktopCapturer> window_capturer_;
   // Flag used by unittests to disable device enumeration.
   bool is_device_enumeration_disabled_;
 
